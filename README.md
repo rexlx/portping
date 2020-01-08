@@ -1,5 +1,5 @@
 # portping
-ping tcp ports with golng
+ping tcp ports with goalng
 
 ```bash
 verify a tcp port is open on a remote machine

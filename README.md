@@ -17,7 +17,8 @@ arguments:
 <br>
 **example**
 <br>
-```bash
+
+```
 $ portping 192.168.1.87 22 -r 250 -c 10 -s -m
 connected 10 times over 4.989891 milliseconds, average is 0.4989891
 ```

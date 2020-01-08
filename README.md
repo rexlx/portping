@@ -5,7 +5,7 @@ ping tcp ports with goalng
 verify a tcp port is open on a remote machine
 
 usage:
-portping HOST PORT [count, timeout]
+portping HOST PORT [-c, -m, -r, -s, -t]
 
 arguments:
 -c    how many times to ping (default is forever)

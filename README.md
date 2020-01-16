@@ -1,5 +1,5 @@
 # portping
-ping tcp ports with goalng
+ping tcp ports with golang
 
 ```bash
 verify a tcp port is open on a remote machine

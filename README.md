@@ -19,6 +19,6 @@ arguments:
 <br>
 
 ```
-$ portping 192.168.1.87 22 -r 250 -c 10 -s -m
-connected 10 times over 4.989891 milliseconds, average is 0.4989891
+portping your_host your_port -c 40 -s -m -r 80
+connected 40 times over 1716.107469 milliseconds, average is 42.902686725
 ```

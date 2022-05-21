@@ -9,14 +9,6 @@ import (
 	"time"
 )
 
-/*
-TODO:
-i orginally made this to be as simple as possible but saw the potential
-for a load testing tool right away. It might be worth investigating if
-i can specify the amount of data to send and then an option to control
-the rate.
-*/
-
 var help_msg string = `
 verify a tcp port is open on a remote machine
 

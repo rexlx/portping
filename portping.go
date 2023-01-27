@@ -2,123 +2,125 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 )
 
-var help_msg string = `
-verify a tcp port is open on a remote machine
+var help string = `
+confirm a specific port is open on a target machine. usage:
+./portping <address> <port> [args]
+./portping pandora.com 443 -c 10 -w 50 -s
 
-usage:
-portping HOST PORT [count, timeout]
-
-arguments:
--c    how many times to ping (default is forever)
--t    timeout, how long to wait before we consider it failed
--s    dont display stats (returns a 1 or 0 exit status)
--m    if running silently, you may want to see over all stats
--r    how long to wait between pings in ms, 0 is none. default is 500
+-c  count,   how many times to ping the target
+-h  help,    print this help message and exit
+-s  silent,  only print end results
+-t  timeout, how long to wait before failing  
+-w  wait,    how long to wait between pings. default is 500ms
 `
 
-var (
-	host    string
-	port    string
-	count   string
-	timeout string
-	rate    string
-	current int
-	silent  bool
-	metrics bool
-)
+type Pinger struct {
+	Addr    string
+	Port    int
+	Count   int
+	Timeout int
+	Wait    int
+	Silent  bool
+	Stats   []time.Duration
+}
 
-func check(e error) {
-	if e != nil {
-		panic(e)
+// initFromArgs initializes our pinger type with it's default values and then,
+// using the user supplied args, modifies them.
+func (p *Pinger) parseArgs() {
+	if len(os.Args) < 3 {
+		log.Fatalln("expected two args, <host> <port>")
+	}
+	// we will use positional args. the address will always go first
+	p.Addr = os.Args[1]
+	p.Port = strToInt(os.Args[2])
+	// empty slice for our duration statistics
+	p.Stats = []time.Duration{}
+	// parse the args in a case switch, the flags package seemed excessive for this tool
+	for i, a := range os.Args[1:] {
+		switch a {
+		case "-c":
+			p.Count = strToInt(os.Args[i+2])
+		case "-t":
+			p.Timeout = strToInt(os.Args[i+2])
+		case "-w":
+			p.Wait = strToInt(os.Args[i+2])
+		case "-s":
+			p.Silent = true
+		case "-h":
+			log.Fatal(help)
+		default:
+		}
 	}
 }
 
-func main() {
-	raw_args := os.Args
-	if len(raw_args) < 3 {
-		fmt.Printf("error expetected at leat two args, HOST PORT\n%v", help_msg)
-		os.Exit(1)
-	} else {
-		host = raw_args[1]
-		port = raw_args[2]
+// getAverageConnectionTime uses a slice of time durations and returns their average in ms
+func (p *Pinger) getAverageConnectionTime() int64 {
+	// a duration of zero
+	var t time.Duration
+	// iter over the slice of durations and increment our artificial one
+	for _, i := range p.Stats {
+		t += i
 	}
-	// set defaults
-	count = "1000000"
-	timeout = "5"
-	silent = false
-	rate = "500"
-	for i, a := range raw_args[1:] {
-		if !strings.HasPrefix(a, "-") {
-			continue
-		} else if a == "-h" {
-			fmt.Println(help_msg)
-			os.Exit(0)
-		} else if a == "-c" {
-			count = raw_args[i+2]
-		} else if a == "-t" {
-			timeout = raw_args[i+2]
-		} else if a == "-s" {
-			silent = true
-		} else if a == "-m" {
-			metrics = true
-		} else if a == "-r" {
-			rate = raw_args[i+2]
-		} else {
-			fmt.Println(help_msg)
-			fmt.Printf("unexpected argument: %v\n", a)
-			os.Exit(1)
-		}
-	}
-	c, err := strconv.Atoi(count)
-	check(err)
-	t, err := strconv.Atoi(timeout)
-	check(err)
-	r, err := strconv.Atoi(rate)
-	times := make([]float64, 0, c)
-	start := time.Now()
-	if !silent {
-		fmt.Println(start)
-	}
-	target := host + ":" + port
-	for current = 0; current < c; current++ {
-		start_time := time.Now()
-		conn, err := net.DialTimeout("tcp", target, time.Duration(t)*time.Second)
-		if err != nil {
-			fmt.Printf("encountered an error when trying port %v on %v:\n%v\n", port, host, err)
-			os.Exit(1)
-		}
-		defer conn.Close()
-		end_time := time.Now()
-		elapsed_time := float64(end_time.Sub(start_time)) / float64(time.Millisecond)
+	// we technically have precision down to the nanosecond, but this is a reasonable program
+	// for reasonable people
+	return t.Milliseconds() / int64(len(p.Stats))
 
-		if !silent {
-			fmt.Printf("pinged %v on port %v, took %f milliseconds\n", host, port, elapsed_time)
+}
+
+// strToInt returns a converted integer or dies
+func strToInt(s string) int {
+	out, err := strconv.Atoi(s)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return out
+}
+
+func main() {
+	// mark the start time
+	begin := time.Now()
+
+	// init a new pinger with some non-zero values
+	ping := Pinger{
+		Count:   1e4,
+		Timeout: 5,
+		Wait:    500,
+	}
+	// get the args
+	ping.parseArgs()
+
+	// begin the work
+	for i := 0; i <= ping.Count; i++ {
+		start := time.Now()
+		// attempt to dial
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ping.Addr, ping.Port), time.Duration(ping.Timeout)*time.Second)
+		// if we cant, log and exit
+		if err != nil {
+			log.Fatalf("encountered an error when dialing port %v on %v:\n%v\n", ping.Port, ping.Addr, err)
 		}
-		if r > 0 {
-			times = append(times, elapsed_time)
-			time.Sleep(time.Duration(r) * time.Millisecond)
+		// otherwise we we able to connect, wait to close it
+		defer conn.Close()
+		// get the duration of the round trip
+		elapsed_time := time.Since(start)
+		// if the output wasn't supressed
+		if !ping.Silent {
+			fmt.Printf("pinged %v on port %v, took %d milliseconds\n", ping.Addr, ping.Port, elapsed_time.Milliseconds())
+		}
+
+		ping.Stats = append(ping.Stats, elapsed_time)
+		if ping.Wait > 0 {
+			time.Sleep(time.Duration(ping.Wait) * time.Millisecond)
 		}
 	}
-	end := time.Now()
-	runtime := float64(end.Sub(start)) / float64(time.Millisecond)
-	avg := runtime / float64(current)
-	if r > 0 {
-		var total float64 = 0
-		for _, val := range times {
-			total += val
-		}
-		runtime = total
-		avg = total / float64(len(times))
+	if !ping.Silent {
+		runtime := time.Since(begin)
+		log.Printf("ran for %v seconds. average connection time was %v ms", runtime.Seconds(), ping.getAverageConnectionTime())
 	}
-	if !silent || metrics {
-		fmt.Printf("connected %v times over %v milliseconds, average is %v\n", current, runtime, avg)
-	}
-	os.Exit(0)
 }

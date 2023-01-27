@@ -8,7 +8,7 @@ confirm a specific port is open on a target machine. usage:
 
 -c  count,   how many times to ping the target
 -h  help,    print this help message and exit
--s  silent,  only print end results
+-s  silent,  supress output
 -t  timeout, how long to wait before failing  
 -w  wait,    how long to wait between pings. default is 500ms
 ```

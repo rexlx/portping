@@ -61,8 +61,7 @@ func (p *Pinger) parseArgs() {
 }
 
 // getAverageConnectionTime uses a slice of time durations and returns their average in ms
-func (p *Pinger) getAverageConnectionTime() int64 {
-	// a duration of zero
+func (p *Pinger) getAverageConnectionTime() float64 {
 	var t time.Duration
 	// iter over the slice of durations and increment our artificial one
 	for _, i := range p.Stats {
@@ -70,7 +69,12 @@ func (p *Pinger) getAverageConnectionTime() int64 {
 	}
 	// we technically have precision down to the nanosecond, but this is a reasonable program
 	// for reasonable people
-	return t.Milliseconds() / int64(len(p.Stats))
+	res := (float64(t.Microseconds()) / 1000) / float64(len(p.Stats))
+	// check if the value is NaN as done here: https://go.dev/src/math/bits.go func IsNaN(f float64) (is bool)
+	if res != res {
+		return 0.0
+	}
+	return res
 
 }
 
@@ -103,7 +107,9 @@ func main() {
 		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ping.Addr, ping.Port), time.Duration(ping.Timeout)*time.Second)
 		// if we cant, log and exit
 		if err != nil {
-			log.Fatalf("encountered an error when dialing port %v on %v:\n%v\n", ping.Port, ping.Addr, err)
+			fmt.Printf("encountered an error when dialing port %v on %v:\n%v\n", ping.Port, ping.Addr, err)
+			time.Sleep(time.Duration(ping.Wait) * time.Millisecond)
+			continue
 		}
 		// otherwise we we able to connect, wait to close it
 		defer conn.Close()
@@ -111,7 +117,7 @@ func main() {
 		elapsed_time := time.Since(start)
 		// if the output wasn't supressed
 		if !ping.Silent {
-			fmt.Printf("pinged %v on port %v, took %d milliseconds\n", ping.Addr, ping.Port, elapsed_time.Milliseconds())
+			fmt.Printf("pinged %v on port %v, took %.3fms\n", ping.Addr, ping.Port, float64(elapsed_time.Microseconds())/1000)
 		}
 
 		ping.Stats = append(ping.Stats, elapsed_time)
@@ -121,6 +127,6 @@ func main() {
 	}
 	if !ping.Silent {
 		runtime := time.Since(begin)
-		log.Printf("ran for %v seconds. average connection time was %v ms", runtime.Seconds(), ping.getAverageConnectionTime())
+		fmt.Printf("ran for %v seconds. average connection time was %.3fms\n", runtime.Seconds(), ping.getAverageConnectionTime())
 	}
 }

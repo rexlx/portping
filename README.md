@@ -1,5 +1,5 @@
 # portping
-ping tcp ports with golang
+ping tcp ports with go
 
 ```bash
 confirm a specific port is open on a target machine. usage:

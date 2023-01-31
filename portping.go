@@ -31,7 +31,10 @@ type Pinger struct {
 	Stats   []time.Duration
 }
 
-// initFromArgs initializes our pinger type with it's default values and then,
+// state represents the exit condition and is ppassed to os.Exit
+var state int
+
+// parseArgs initializes our pinger type with it's default values and then,
 // using the user supplied args, modifies them.
 func (p *Pinger) parseArgs() {
 	if len(os.Args) < 3 {
@@ -107,11 +110,14 @@ func main() {
 		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ping.Addr, ping.Port), time.Duration(ping.Timeout)*time.Second)
 		// if we cant, log and exit
 		if err != nil {
-			fmt.Printf("encountered an error when dialing port %v on %v:\n%v\n", ping.Port, ping.Addr, err)
+			state = 1
+			if !ping.Silent {
+				fmt.Printf("encountered an error when dialing port %v on %v:\n%v\n", ping.Port, ping.Addr, err)
+			}
 			time.Sleep(time.Duration(ping.Wait) * time.Millisecond)
 			continue
 		}
-		// otherwise we we able to connect, wait to close it
+		// otherwise we were able to connect, wait to close it
 		defer conn.Close()
 		// get the duration of the round trip
 		elapsed_time := time.Since(start)
@@ -129,4 +135,5 @@ func main() {
 		runtime := time.Since(begin)
 		fmt.Printf("ran for %v seconds. average connection time was %.3fms\n", runtime.Seconds(), ping.getAverageConnectionTime())
 	}
+	os.Exit(state)
 }

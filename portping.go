@@ -31,21 +31,20 @@ type Pinger struct {
 	Stats   []time.Duration
 }
 
-// state represents the exit condition and is ppassed to os.Exit
+// state represents the exit condition and is passed to os.Exit
 var state int
 
-// parseArgs initializes our pinger type with it's default values and then,
-// using the user supplied args, modifies them.
+// parseArgs modifies the default pinger with the user supplied args
 func (p *Pinger) parseArgs() {
 	if len(os.Args) < 3 {
 		log.Fatalln("expected two args, <host> <port>")
 	}
-	// we will use positional args. the address will always go first
+	// we use positional args. the address will always go first
 	p.Addr = os.Args[1]
 	p.Port = strToInt(os.Args[2])
 	// empty slice for our duration statistics
 	p.Stats = []time.Duration{}
-	// parse the args in a case switch, the flags package seemed excessive for this tool
+	// parse the args
 	for i, a := range os.Args[1:] {
 		switch a {
 		case "-c":
@@ -105,27 +104,30 @@ func main() {
 
 	// begin the work
 	for i := 0; i <= ping.Count; i++ {
+		// we time the duration of each ping using this
 		start := time.Now()
 		// attempt to dial
 		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ping.Addr, ping.Port), time.Duration(ping.Timeout)*time.Second)
 		// if we cant, log and exit
 		if err != nil {
+			// the program will exit with 1 in the event of ANY failure
 			state = 1
 			if !ping.Silent {
 				fmt.Printf("encountered an error when dialing port %v on %v:\n%v\n", ping.Port, ping.Addr, err)
 			}
 			time.Sleep(time.Duration(ping.Wait) * time.Millisecond)
+			// try again
 			continue
 		}
-		// otherwise we were able to connect, wait to close it
+		// otherwise we were able to connect, wait to close
 		defer conn.Close()
 		// get the duration of the round trip
 		elapsed_time := time.Since(start)
-		// if the output wasn't supressed
+
 		if !ping.Silent {
 			fmt.Printf("pinged %v on port %v, took %.3fms\n", ping.Addr, ping.Port, float64(elapsed_time.Microseconds())/1000)
 		}
-
+		// add the time it took to do everything into our stats slice
 		ping.Stats = append(ping.Stats, elapsed_time)
 		if ping.Wait > 0 {
 			time.Sleep(time.Duration(ping.Wait) * time.Millisecond)

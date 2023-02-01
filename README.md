@@ -1,24 +1,14 @@
 # portping
-ping tcp ports with golang
+ping tcp ports with go
 
 ```bash
-verify a tcp port is open on a remote machine
+confirm a specific port is open on a target machine. usage:
+portping <address> <port> [args]
+portping pandora.com 443 -c 10 -w 50 -s
 
-usage:
-portping HOST PORT [-c, -m, -r, -s, -t]
-
-arguments:
--c    how many times to ping (default is forever)
--t    timeout, how long to wait before we consider it failed
--s    dont display stats (returns a 1 or 0 exit status)
--m    if running silently, you may want to see over all stats
--r    how long to wait between pings in ms, 0 is none. default is 500
-```
-<br>
-**example**
-<br>
-
-```
-$ portping 192.168.1.87 22 -r 250 -c 10 -s -m
-connected 10 times over 4.989891 milliseconds, average is 0.4989891
+-c  count,   how many times to ping the target
+-h  help,    print this help message and exit
+-s  silent,  suppress output
+-t  timeout, how long to wait before failing  
+-w  wait,    how long to wait between pings. default is 500ms
 ```

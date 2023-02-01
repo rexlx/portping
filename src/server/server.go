@@ -44,7 +44,9 @@ func (s *Server) Ping(in *pb.PingRequest, stream pb.Reacher_PingServer) error {
 	if in.Count < 1 {
 		in.Count = 1e4
 	}
-	if in.Wait < 1 {
+	// setting a really low wait is a recipe for disaster, or your client is probably trying to spam a port.
+	// the default behavior is to wait no less than 26 milliseconds between pings
+	if in.Wait < 26 {
 		in.Wait = 26
 	}
 	ping := Pinger{
@@ -72,18 +74,19 @@ func (s *Server) Ping(in *pb.PingRequest, stream pb.Reacher_PingServer) error {
 		defer conn.Close()
 		// get the duration of the round trip
 		elapsed_time := time.Since(start)
-		// if the output wasn't supressed
+		// send the good news
 		stream.Send(&pb.PingResponse{
 			Error:    false,
 			Msg:      fmt.Sprintf("pinged %v on port %v, took %.3fms\n", ping.Addr, ping.Port, float64(elapsed_time.Microseconds())/1000),
 			Duration: int64(elapsed_time),
 		})
-
+		// record the statistics
 		ping.Stats = append(ping.Stats, elapsed_time)
 		if ping.Wait > 0 {
 			time.Sleep(time.Duration(ping.Wait) * time.Millisecond)
 		}
 	}
+	// send statistics
 	stream.Send(&pb.PingResponse{
 		Error:    false,
 		Msg:      fmt.Sprintf("average duration was %v", ping.getAverageConnectionTime()),

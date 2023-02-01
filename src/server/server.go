@@ -59,7 +59,7 @@ func (s *Server) Ping(in *pb.PingRequest, stream pb.Reacher_PingServer) error {
 		start := time.Now()
 		// attempt to dial
 		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ping.Addr, ping.Port), time.Duration(ping.Timeout)*time.Second)
-		// if we cant, log and exit
+		// if we cant, log and retry
 		if err != nil {
 			stream.Send(&pb.PingResponse{
 				Error: true,

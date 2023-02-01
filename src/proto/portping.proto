@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package portping;
+
+option go_package = "github.com/rexlx/portping";
+
+
+service Reacher {
+    rpc Ping(PingRequest) returns (stream PingResponse);
+}
+
+message PingRequest {
+    string address = 1;
+    int32 port = 2;
+    int32 count = 3;
+    int32 wait = 4;
+}
+
+message PingResponse {
+    bool error = 1;
+    string msg = 2;
+    int64 duration = 3;
+}

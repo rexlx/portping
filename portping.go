@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -37,7 +36,8 @@ var state int
 // parseArgs modifies the default pinger with the user supplied args
 func (p *Pinger) parseArgs() {
 	if len(os.Args) < 3 {
-		log.Fatalln("expected two args, <host> <port>")
+		fmt.Println(help)
+		os.Exit(1)
 	}
 	// we use positional args. the address will always go first
 	p.Addr = os.Args[1]
@@ -56,7 +56,8 @@ func (p *Pinger) parseArgs() {
 		case "-s":
 			p.Silent = true
 		case "-h":
-			log.Fatal(help)
+			fmt.Println(help)
+			os.Exit(0)
 		default:
 		}
 	}
@@ -84,7 +85,8 @@ func (p *Pinger) getAverageConnectionTime() float64 {
 func strToInt(s string) int {
 	out, err := strconv.Atoi(s)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 	return out
 }
